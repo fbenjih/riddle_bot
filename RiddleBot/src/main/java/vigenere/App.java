@@ -3,16 +3,15 @@ package main.java.vigenere;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class App {
 
-    private static final String RIDDLE_MESSAGE = reverseString("JKPPCM OYL CTLQ JLODPYOPH YTLC YTLC RYTKPPCQ JLODPFE RZQ WTLS YTLC XCZEDCPOYFSE ESRTW JLOYZX XCZED EDFO JLOYFD DCPHZSD HZYD ESRTW JLOTCQ JETYTNTG YT YTLC RYTKPPCQ JLODCFSE VPPH EIPY RZQ XCZEDCPOYFSE JLOTCQ PWKKTCO RYTKPPCQ JGLPS JLODCFSE JETYTNTG YT RZQ JLODPYOPH PKLS SETH CTLQ JLODPFE HZYD PWKKTCO JGLPS JLOYZX YTLC DCPHZSD JLOYFD VPPH DTSE CZQ EDLNPCZQ CPSELPH");
+    private static final String RIDDLE_MESSAGE = "JKPPCM OYL CTLQ JLODPYOPH YTLC YTLC RYTKPPCQ JLODPFE RZQ WTLS YTLC XCZEDCPOYFSE ESRTW JLOYZX XCZED EDFO JLOYFD DCPHZSD HZYD ESRTW JLOTCQ JETYTNTG YT YTLC RYTKPPCQ JLODCFSE VPPH EIPY RZQ XCZEDCPOYFSE JLOTCQ PWKKTCO RYTKPPCQ JGLPS JLODCFSE JETYTNTG YT RZQ JLODPYOPH PKLS SETH CTLQ JLODPFE HZYD PWKKTCO JGLPS JLOYZX YTLC DCPHZSD JLOYFD VPPH DTSE CZQ EDLNPCZQ CPSELPH";
     private static final String FILE_NAME = "src/main/resources/words.txt";
     private static final String FOUND_KEYS_MESSAGE = "Riddle keys were found! The encrypted message is above this sentence.";
     private static final String LOST_KEYS_MESSAGE = "Proper riddle keys don't exist to encrypt the message.";
@@ -20,43 +19,36 @@ public class App {
     private static final int ASCII_START = 'A', ASCII_END = 'Z';
     private static final int LOWEST_SHIFT = 0, HIGHEST_SHIFT = 25;
 
-    private static String reverseString(String input) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(input);
-        return stringBuilder.reverse().toString();
-    }
-
     public static void main( String[] args ) {
-        List<String> dictionary = uppercasedLines(readFromFile());
+        Set<String> dictionary = uppercasedLines(readFromFile());
         boolean isSolutionFound = doesSolutionExist(dictionary);
         String resultMessage = isSolutionFound ? FOUND_KEYS_MESSAGE : LOST_KEYS_MESSAGE;
         System.out.println(resultMessage);
     }
 
-    private static List<String> uppercasedLines(List<String> originalLines){
-        List<String> transformedStrings = new LinkedList<>();
+    private static Set<String> uppercasedLines(Set<String> originalLines){
+        Set<String> transformedStrings = new TreeSet<>();
         for(String currentString : originalLines) {
             transformedStrings.add(currentString.toUpperCase());
         }
         return transformedStrings;
     }
 
-    private static List<String> readFromFile() {
-        List<String> linesFromTheFile = new ArrayList<>();
+    private static Set<String> readFromFile() {
+        Set<String> linesFromTheFile = new TreeSet<>();
         try (Stream<String> stream = Files.lines(Paths.get(FILE_NAME))) {
-            linesFromTheFile = stream.collect(Collectors.toList());
+            linesFromTheFile = stream.collect(Collectors.toSet());
         } catch (IOException exception) {
             exception.printStackTrace();
         }
         return linesFromTheFile;
     }
 
-    private static boolean doesSolutionExist(List<String> dictionary) {
-        boolean isSolutionFound = false;
-        for(int firstPossibleKey = LOWEST_SHIFT; firstPossibleKey <= HIGHEST_SHIFT && !isSolutionFound; firstPossibleKey++) {
-            for(int secondPossibleKey = LOWEST_SHIFT; secondPossibleKey <= HIGHEST_SHIFT && !isSolutionFound; secondPossibleKey++) {
-                for(int thirdPossibleKey = LOWEST_SHIFT; thirdPossibleKey <= HIGHEST_SHIFT && !isSolutionFound; thirdPossibleKey++) {
-                    for(int fourthPossibleKey = LOWEST_SHIFT; fourthPossibleKey <= HIGHEST_SHIFT && !isSolutionFound; fourthPossibleKey++) {
+    private static boolean doesSolutionExist(Set<String> dictionary) {
+        for(int firstPossibleKey = LOWEST_SHIFT; firstPossibleKey <= HIGHEST_SHIFT; firstPossibleKey++) {
+            for(int secondPossibleKey = LOWEST_SHIFT; secondPossibleKey <= HIGHEST_SHIFT; secondPossibleKey++) {
+                for(int thirdPossibleKey = LOWEST_SHIFT; thirdPossibleKey <= HIGHEST_SHIFT; thirdPossibleKey++) {
+                    for(int fourthPossibleKey = LOWEST_SHIFT; fourthPossibleKey <= HIGHEST_SHIFT; fourthPossibleKey++) {
                         int[] currentPossibleRiddleKeys = { firstPossibleKey, secondPossibleKey, thirdPossibleKey, fourthPossibleKey };
                         System.out.println("[" +currentPossibleRiddleKeys[0] +
                           ", " + currentPossibleRiddleKeys[1] +
@@ -65,39 +57,44 @@ public class App {
                         String currentPossibleDecodedText = messageCracking(currentPossibleRiddleKeys);
                         if(areAllWordsContainedInDictionary(currentPossibleDecodedText, dictionary)) {
                             System.out.println(currentPossibleDecodedText);
-                            isSolutionFound = true;
+                            return true;
                         }
                     }
                 }
             }
         }
-        return isSolutionFound;
+        return false;
     }
 
     private static String messageCracking(int riddleKeys[]) {
         int currentRiddleKeyIndex = 0;
-        String replacedCharactersConcatenation = "";
-        for (int i = 0; i < RIDDLE_MESSAGE.length(); i++) {
-            if(RIDDLE_MESSAGE.charAt(i) == ' ') {
-                replacedCharactersConcatenation += ' ';
+        StringBuilder result = new StringBuilder();
+        String reversedRiddleMessage = reverseString(RIDDLE_MESSAGE);
+        for (int i = 0; i < reversedRiddleMessage.length(); i++) {
+            if(reversedRiddleMessage.charAt(i) == ' ') {
+                result.append(' ');
             } else {
                 int rotationNumber = riddleKeys[currentRiddleKeyIndex % RIDDLE_KEYS];
-                int possiblePosition = RIDDLE_MESSAGE.charAt(i) - rotationNumber;
+                int possiblePosition = reversedRiddleMessage.charAt(i) - rotationNumber;
                 if (possiblePosition < ASCII_START) {
                     int toBeDeductedFromTheEnd =  possiblePosition - ASCII_START + 1;
-                    replacedCharactersConcatenation += (char) (ASCII_END + toBeDeductedFromTheEnd);
+                    result.append((char) (ASCII_END + toBeDeductedFromTheEnd));
                 }
                 else {
-                    replacedCharactersConcatenation += (char) (RIDDLE_MESSAGE.charAt(i) - rotationNumber);
+                    result.append((char) (reversedRiddleMessage.charAt(i) - rotationNumber));
                 }
                 currentRiddleKeyIndex++;
             }
         }
-        return replacedCharactersConcatenation;
+        return result.toString();
     }
 
-    private static boolean areAllWordsContainedInDictionary(String textToBeChecked, List<String> availableWords) {
+    private static String reverseString(String input) {
+        StringBuilder stringBuilder = new StringBuilder(input);
+        return stringBuilder.reverse().toString();
+    }
+
+    private static boolean areAllWordsContainedInDictionary(String textToBeChecked, Set<String> availableWords) {
         return availableWords.containsAll(Arrays.asList(textToBeChecked.split(" ")));
     }
 }
-
